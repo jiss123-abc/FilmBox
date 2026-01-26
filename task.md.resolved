@@ -1,0 +1,18 @@
+# Tasks
+
+- [x] Initialize Backend Structure <!-- id: 0 -->
+    - [x] Create directory structure `backend/app/{core,models,schemas,api,ml,agents}` <!-- id: 1 -->
+    - [x] Create [backend/app/main.py](file:///e:/Filmbox/backend/app/main.py) with health check endpoint <!-- id: 2 -->
+    - [x] Create [backend/app/core/config.py](file:///e:/Filmbox/backend/app/core/config.py) <!-- id: 3 -->
+- [x] Implement Database Setup <!-- id: 4 -->
+    - [x] Configure SQLite with SQLAlchemy <!-- id: 5 -->
+- [x] Data Ingestion and Verification <!-- id: 6 -->
+    - [x] Create database models in [base_models.py](file:///e:/Filmbox/backend/app/models/base_models.py) <!-- id: 8 -->
+    - [x] Create ingestion script [ingest_movielens.py](file:///e:/Filmbox/backend/app/scripts/ingest_movielens.py) <!-- id: 9 -->
+    - [x] Run ingestion script <!-- id: 10 -->
+    - [x] Run health check test <!-- id: 7 -->
+- [/] Implement Recommendation System <!-- id: 11 -->
+    - [x] Decide recommendation approach (Collaborative Filtering) <!-- id: 12 -->
+    - [ ] Create recommendation engine in `ml/recommender.py` <!-- id: 13 -->
+    - [ ] Integrate recommendation endpoint in API <!-- id: 14 -->
+
