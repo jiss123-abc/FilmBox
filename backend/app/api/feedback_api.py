@@ -6,7 +6,8 @@ from app.models.recommendation_log import RecommendationLog
 from app.ml.strategy_lookup import get_last_strategy_for_user
 from app.ml.strategy_learning import update_strategy_weight
 from app.ml.engagement_tracker import update_engagement
-from app.ml.engagement_tracker import update_engagement
+from app.ml.taste_updater import update_genre_preferences
+from app.models.base_models import Movie  # Use Base-defined Movie model
 
 router = APIRouter(prefix="/api/feedback", tags=["Feedback"])
 
@@ -71,12 +72,18 @@ def submit_feedback(
         liked=bool(liked)
     )
 
-    # 4. Update Engagement Health (Step 4)
-    update_engagement(
-        session=db,
-        user_id=user_id,
-        liked=bool(liked)
-    )
+    # 5. Update Long-Term Taste (Phase 20.2)
+    # Fetch movie genres to know what to boost/penalize
+    movie = db.query(Movie).filter(Movie.id == movie_id).first()
+    if movie and movie.genres:
+        genre_names = [g.name for g in movie.genres]
+        if genre_names:
+            update_genre_preferences(
+                session=db,
+                user_id=user_id,
+                genres=genre_names,
+                liked=bool(liked)
+            )
 
     db.refresh(feedback)
     return {
