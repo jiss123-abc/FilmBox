@@ -6,7 +6,7 @@ class UserStrategyStats(Base):
     __tablename__ = "user_strategy_stats"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
+    user_id = Column(String, index=True)
     strategy = Column(String, nullable=False)
     total_used = Column(Integer, default=0)
     positive_feedback = Column(Integer, default=0)

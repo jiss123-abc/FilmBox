@@ -6,6 +6,7 @@ from app.models.feedback_models import UserFeedback
 from app.models.strategy_stats import StrategyStats
 from app.analytics.user_engagement import get_user_engagement_metrics
 from app.analytics.strategy_trends import get_strategy_evolution_metrics
+from app.services.engagement_service import EngagementService
 
 class AnalyticsService:
     def __init__(self, db: Session):
@@ -88,3 +89,30 @@ class AnalyticsService:
         Returns a list of users and their engagement scores.
         """
         return get_user_engagement_metrics(self.db)
+
+    def get_churn_analysis(self):
+        """
+        Returns a summary of churn risks across the user base.
+        """
+        engagement_service = EngagementService(self.db)
+        
+        # Get all active user IDs from feedback or logs
+        user_ids_query = self.db.query(UserFeedback.user_id).distinct().all()
+        user_ids = [str(u[0]) for u in user_ids_query]
+        
+        log_user_ids_query = self.db.query(RecommendationLog.user_id).distinct().all()
+        user_ids.extend([str(u[0]) for u in log_user_ids_query])
+        
+        unique_users = list(set(user_ids))
+        
+        results = []
+        for uid in unique_users:
+            risk = engagement_service.get_churn_risk(uid)
+            score = engagement_service.calculate_engagement_score(uid)
+            results.append({
+                "user_id": uid,
+                "risk_level": risk,
+                "engagement_score": round(score, 2)
+            })
+            
+        return results

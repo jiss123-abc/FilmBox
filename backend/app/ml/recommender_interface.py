@@ -18,30 +18,44 @@ def get_strategy_for_user(user_id: int, use_experiment: bool = False) -> str:
     return select_best_strategy(user_id)
 
 
+from app.ml.engagement_reader import get_engagement_score
+from app.ml.adaptive_strategy import select_adaptive_strategy
+from app.ml.exploration_logic import apply_exploration
+
 def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
     """
     Orchestrates the recommendation flow:
-    1. Select strategy (Experimental Override)
+    1. Select strategy (Adaptive via Phase 19)
     2. Fetch recommendations from the hybrid recommender
-    3. Record strategy usage for learning
-    4. Log recommendation event for analytics
+    3. Apply Exploration (Diversity Injection)
+    4. Record strategy usage & Log event
     """
     session: Session = SessionLocal()
     try:
-        # Phase 14: Use experiment-assigned strategy
-        strategy = get_strategy_for_user(user_id)
+        # Phase 19: Adaptive Strategy Switching
+        base_strategy = select_best_strategy(user_id)
+        
+        engagement = get_engagement_score(session, user_id)
+        
+        adaptive_result = select_adaptive_strategy(base_strategy, engagement)
+        
+        final_strategy = adaptive_result["strategy"]
+        exploration_rate = adaptive_result.get("exploration", 0.0)
 
         hybrid = HybridRecommender(session)
         result = hybrid.recommend(
             user_id=user_id,
-            top_n=top_n,
+            top_n=top_n, # Fetch same amount, we shuffle in place
             genres=genres,
-            preferred_strategy=strategy
+            preferred_strategy=final_strategy
         )
 
         # The hybrid.recommend return dict contains a list of movies under 'recommendations'
         # We need to extract them to match the original return format and for tracking.
         recommendations = result.get("recommendations", [])
+        
+        # Phase 19.2: Apply Exploration (Diversity Shuffling)
+        recommendations = apply_exploration(recommendations, exploration_rate)
 
         # Standardize for consumption
         formatted_recs = []
@@ -50,14 +64,14 @@ def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
                 "movie_id": movie.get("id") or movie.get("movie_id"),
                 "title": movie.get("title"),
                 "explanation": movie.get("explanation", ""),
-                "strategy": strategy
+                "strategy": final_strategy
             })
 
-        record_strategy_use(user_id, strategy)
+        record_strategy_use(user_id, final_strategy)
 
         log_recommendation_event(
             user_id=user_id,
-            strategy=strategy,
+            strategy=final_strategy,
             num_recommendations=len(formatted_recs),
             experiment_group=None # Phase 16: Not in experiment by default
         )

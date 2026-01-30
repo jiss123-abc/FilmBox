@@ -5,6 +5,8 @@ from app.models.feedback_models import UserFeedback
 from app.models.recommendation_log import RecommendationLog
 from app.ml.strategy_lookup import get_last_strategy_for_user
 from app.ml.strategy_learning import update_strategy_weight
+from app.ml.engagement_tracker import update_engagement
+from app.ml.engagement_tracker import update_engagement
 
 router = APIRouter(prefix="/api/feedback", tags=["Feedback"])
 
@@ -61,6 +63,20 @@ def submit_feedback(
             strategy=identifiable_strategy,
             liked=bool(liked)
         )
+
+    # 4. Update Engagement Health (Phase 18.3)
+    update_engagement(
+        session=db,
+        user_id=user_id,
+        liked=bool(liked)
+    )
+
+    # 4. Update Engagement Health (Step 4)
+    update_engagement(
+        session=db,
+        user_id=user_id,
+        liked=bool(liked)
+    )
 
     db.refresh(feedback)
     return {
