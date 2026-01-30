@@ -1,5 +1,4 @@
 from typing import Dict, Any, List
-
 from app.ml.recommender_interface import get_hybrid_recommendations
 
 
@@ -17,6 +16,8 @@ def run_recommendation_agent(user_id: int, message: str, genres: list[str] | Non
             "recommendations": [],
             "strategy": "none"
         }
+
+    # Strategy usage logging is now handled by record_strategy_use in get_hybrid_recommendations
 
     formatted_movies: List[Dict[str, Any]] = []
 

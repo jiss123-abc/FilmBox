@@ -11,6 +11,7 @@ class UserFeedback(Base):
     movie_id = Column(Integer, ForeignKey("movies.id"), nullable=False)
     rating = Column(Float, nullable=True)  # Optional explicit rating
     liked = Column(Integer, nullable=True)  # 1 = liked, 0 = disliked
+    strategy = Column(String, nullable=True) # New for Phase 15: Denormalized for fast analytics
     timestamp = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

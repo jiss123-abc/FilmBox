@@ -1,67 +1,68 @@
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.ml.hybrid_recommender import HybridRecommender
-from app.models.feedback_models import UserFeedback
-from app.models.base_models import Movie
+from app.ml.strategy_selector import select_best_strategy
+from app.ml.strategy_tracker import record_strategy_use
+from app.ml.recommendation_logger import log_recommendation_event
+from app.experiments.assignment import get_or_assign_strategy, EXPERIMENT_GROUP
 
-
-def get_hybrid_recommendations(
-    user_id: int, 
-    top_n: int = 10, 
-    genres: list[str] | None = None,
-    mood: str | None = None,
-    time_context: str | None = None
-):
+def get_strategy_for_user(user_id: int, use_experiment: bool = False) -> str:
     """
-    Returns hybrid recommendations in a simple dict format
-    for consumption by the AI Agent or other orchestration layers.
-    Includes adjustments based on real-time user feedback (Likes).
+    Selects strategy:
+    - Adaptive (Phase 16): Based on weights + exploration.
+    - Experimental (Phase 14): Fixed assignment if flag is true.
+    """
+    if use_experiment:
+        return get_or_assign_strategy(user_id)
+    
+    return select_best_strategy(user_id)
+
+
+def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
+    """
+    Orchestrates the recommendation flow:
+    1. Select strategy (Experimental Override)
+    2. Fetch recommendations from the hybrid recommender
+    3. Record strategy usage for learning
+    4. Log recommendation event for analytics
     """
     session: Session = SessionLocal()
     try:
+        # Phase 14: Use experiment-assigned strategy
+        strategy = get_strategy_for_user(user_id)
+
         hybrid = HybridRecommender(session)
         result = hybrid.recommend(
-            user_id=user_id, 
-            top_n=top_n, 
+            user_id=user_id,
+            top_n=top_n,
             genres=genres,
-            mood=mood,
-            time_context=time_context
+            preferred_strategy=strategy
         )
 
-        # Standardize output for agent
-        recommendations = []
-        for movie in result["recommendations"]:
-            recommendations.append({
-                "movie_id": movie.get("id"),
+        # The hybrid.recommend return dict contains a list of movies under 'recommendations'
+        # We need to extract them to match the original return format and for tracking.
+        recommendations = result.get("recommendations", [])
+
+        # Standardize for consumption
+        formatted_recs = []
+        for movie in recommendations:
+            formatted_recs.append({
+                "movie_id": movie.get("id") or movie.get("movie_id"),
                 "title": movie.get("title"),
                 "explanation": movie.get("explanation", ""),
-                "strategy": result.get("strategy")
+                "strategy": strategy
             })
 
-        # --- FEEDBACK BOOST (Phase 9 Step 3) ---
-        # If the user has liked movies, ensure they are prioritized or acknowledged
-        positive_feedback = (
-            session.query(UserFeedback)
-            .filter_by(user_id=str(user_id), liked=1)
-            .limit(3)
-            .all()
-        )
-        
-        for fb in positive_feedback:
-            # Avoid duplicating if already in recommendations
-            if any(r["movie_id"] == fb.movie_id for r in recommendations):
-                continue
-                
-            movie_obj = session.query(Movie).get(fb.movie_id)
-            if movie_obj:
-                recommendations.insert(0, {
-                    "movie_id": fb.movie_id,
-                    "title": movie_obj.title,
-                    "explanation": "Highly recommended based on your recent 'Like'.",
-                    "strategy": "feedback-boost"
-                })
+        record_strategy_use(user_id, strategy)
 
-        return recommendations[:top_n]
+        log_recommendation_event(
+            user_id=user_id,
+            strategy=strategy,
+            num_recommendations=len(formatted_recs),
+            experiment_group=None # Phase 16: Not in experiment by default
+        )
+
+        return formatted_recs[:top_n]
 
     finally:
         session.close()
