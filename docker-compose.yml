@@ -16,8 +16,6 @@ services:
       - ENV=production
       - DATABASE_URL=sqlite:///./filmBox.db
     restart: unless-stopped
-    networks:
-      - filmbox-net
 
   # ─── Prometheus (Metrics Collector) ──────────────────
   prometheus:
@@ -30,8 +28,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-    networks:
-      - filmbox-net
 
   # ─── Grafana (Dashboards) ───────────────────────────
   grafana:
@@ -44,9 +40,3 @@ services:
     depends_on:
       - prometheus
     restart: unless-stopped
-    networks:
-      - filmbox-net
-
-networks:
-  filmbox-net:
-    driver: bridge
