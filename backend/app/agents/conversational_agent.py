@@ -34,9 +34,7 @@ def run_conversational_agent_llm(user_id: int, message: str) -> Dict[str, Any]:
         # Use our refined interface with extracted intent data
         recommendations = get_hybrid_recommendations(
             user_id=user_id,
-            genres=genres,
-            mood=intent.mood,
-            time_context=intent.time_context
+            genres=genres
         )
         
         # Step 2.1: Fail safely if nothing matches the filters

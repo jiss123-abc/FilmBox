@@ -24,6 +24,7 @@ from app.ml.exploration_logic import apply_exploration
 from app.ml.decay import decay_preferences
 from app.ml.preference_reader import get_genre_preferences
 from app.ml.taste_bias import apply_taste_bias
+from app.ml.safety_controls import SafetyEnforcer
 
 def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
     """
@@ -71,6 +72,10 @@ def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
         # Phase 19.2: Apply Exploration (Diversity Shuffling)
         recommendations = apply_exploration(recommendations, exploration_rate)
 
+        # Phase 21.2: Safety Controls (Production Gate)
+        recommendations = SafetyEnforcer.filter_low_confidence(recommendations)
+        recommendations = SafetyEnforcer.enforce_limits(recommendations, top_n)
+
         # Standardize for consumption
         formatted_recs = []
         for movie in recommendations:
@@ -83,11 +88,15 @@ def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
 
         record_strategy_use(user_id, final_strategy)
 
+        # Extract IDs
+        rec_ids = [r["movie_id"] for r in formatted_recs]
+
         log_recommendation_event(
             user_id=user_id,
             strategy=final_strategy,
             num_recommendations=len(formatted_recs),
-            experiment_group=None # Phase 16: Not in experiment by default
+            experiment_group=None, # Phase 16: Not in experiment by default
+            movie_ids=rec_ids
         )
 
         return formatted_recs[:top_n]

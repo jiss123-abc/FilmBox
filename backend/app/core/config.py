@@ -1,7 +1,8 @@
-from pydantic import BaseSettings
+import os
+from dotenv import load_dotenv
 
-class Settings(BaseSettings):
-    APP_NAME: str = "FilmBox Backend"
-    DATABASE_URL: str = "sqlite:///./filmBox.db"
+load_dotenv(override=True)
 
-settings = Settings()
+ENV = os.getenv("ENV", "development")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./filmBox.db")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

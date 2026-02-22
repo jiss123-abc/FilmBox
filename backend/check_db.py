@@ -12,7 +12,9 @@ def check_feedback():
         print(f"{'ID':<5} | {'User ID':<10} | {'Movie ID':<10} | {'Liked':<5} | {'Rating':<6}")
         print("-" * 50)
         for fb in feedbacks:
-            print(f"{fb.id:<5} | {fb.user_id:<10} | {fb.movie_id:<10} | {fb.liked:<5} | {fb.rating:<6}")
+            liked = fb.liked if fb.liked is not None else "N/A"
+            rating = fb.rating if fb.rating is not None else "N/A"
+            print(f"{fb.id:<5} | {fb.user_id:<10} | {fb.movie_id:<10} | {liked:<5} | {rating:<6}")
     finally:
         session.close()
 

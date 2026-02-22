@@ -54,7 +54,7 @@ def extract_intent(message: str) -> RecommendationIntent:
             contents=INTENT_PROMPT.format(message=message),
             config=types.GenerateContentConfig(
                 temperature=0.0,
-                max_output_tokens=128
+                max_output_tokens=512
             )
         )
 
@@ -69,7 +69,13 @@ def extract_intent(message: str) -> RecommendationIntent:
         return RecommendationIntent(**data)
 
     except Exception as e:
-        print(f"⚠️ [Intent Error] Failed to parse intent, proceeding without filters: {e}")
+        print(f"⚠️ [Intent Error] Failed to parse intent: {e}")
+        try:
+             # Try to print preview of response text if possible
+             print(f"DEBUG Raw Text: {locals().get('raw_text', 'Start not reached')}")
+        except:
+             pass
+        # Return a safe default to prevent system crashes
         # Return a safe default to prevent system crashes
         return RecommendationIntent(
             intent="recommend_movie",
