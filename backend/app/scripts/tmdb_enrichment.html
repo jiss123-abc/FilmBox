@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FilmBox – TMDb Enrichment</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:#0a0a0f; color:#e0e0e0; padding:2rem; }
+        h1 { color:#7c8aff; margin-bottom:1rem; }
+        .stats { display:flex; gap:1.5rem; margin:1rem 0; }
+        .stat { background:rgba(124,138,255,.08); border:1px solid rgba(124,138,255,.2); border-radius:12px; padding:1rem 1.5rem; }
+        .stat .num { font-size:2rem; font-weight:700; color:#7c8aff; }
+        .stat .label { font-size:.85rem; opacity:.7; }
+        #log { background:#111; border-radius:8px; padding:1rem; height:300px; overflow-y:auto; font-family:monospace; font-size:.8rem; line-height:1.6; margin-top:1rem; }
+        .ok { color:#4ade80; } .err { color:#f87171; } .skip { color:#fbbf24; }
+        button { background:#7c8aff; color:#fff; border:none; padding:.75rem 2rem; border-radius:8px; font-size:1rem; cursor:pointer; margin:.5rem .5rem 0 0; }
+        button:hover { background:#6366f1; }
+        button:disabled { opacity:.5; cursor:not-allowed; }
+        .progress-bar { width:100%; height:6px; background:#222; border-radius:3px; margin-top:.5rem; }
+        .progress-fill { height:100%; background:linear-gradient(90deg,#7c8aff,#4ade80); border-radius:3px; transition:width .3s; }
+    </style>
+</head>
+<body>
+    <h1>🎬 FilmBox TMDb Enrichment</h1>
+    <p>This page fetches movie metadata from TMDb using your browser (which can reach the API) and saves it to your local database.</p>
+
+    <div class="stats">
+        <div class="stat"><div class="num" id="total">–</div><div class="label">Total Movies</div></div>
+        <div class="stat"><div class="num" id="enriched">0</div><div class="label">Enriched</div></div>
+        <div class="stat"><div class="num" id="errors">0</div><div class="label">Errors</div></div>
+        <div class="stat"><div class="num" id="skipped">0</div><div class="label">Skipped</div></div>
+    </div>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+
+    <br>
+    <button id="startBtn" onclick="startEnrichment()">▶ Start Enrichment</button>
+    <button id="stopBtn" onclick="stopEnrichment()" disabled>⏹ Stop</button>
+
+    <div id="log"></div>
+
+    <script>
+        const API_KEY = '31a14cd18477e2e09b33ee7b980b249b';
+        const TMDB_BASE = 'https://api.themoviedb.org/3/movie';
+        const BACKEND = 'http://127.0.0.1:8000';
+        const BATCH_SIZE = 20;
+        const DELAY_MS = 50;  // ~20 req/sec
+
+        let mapping = {};
+        let running = false;
+        let enrichedCount = 0;
+        let errorCount = 0;
+        let skippedCount = 0;
+
+        const log = (msg, cls = '') => {
+            const el = document.getElementById('log');
+            el.innerHTML += `<div class="${cls}">${new Date().toLocaleTimeString()} | ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        };
+
+        const updateStats = (total) => {
+            document.getElementById('enriched').textContent = enrichedCount;
+            document.getElementById('errors').textContent = errorCount;
+            document.getElementById('skipped').textContent = skippedCount;
+            const pct = ((enrichedCount + errorCount + skippedCount) / total * 100).toFixed(1);
+            document.getElementById('progress').style.width = pct + '%';
+        };
+
+        async function fetchTmdb(tmdbId) {
+            const resp = await fetch(`${TMDB_BASE}/${tmdbId}?api_key=${API_KEY}&language=en-US`);
+            if (resp.status === 429) {
+                const retryAfter = parseInt(resp.headers.get('Retry-After') || '2');
+                log(`Rate limited, waiting ${retryAfter}s...`, 'err');
+                await new Promise(r => setTimeout(r, retryAfter * 1000));
+                return fetchTmdb(tmdbId);
+            }
+            if (!resp.ok) return null;
+            return resp.json();
+        }
+
+        async function saveBatch(batch) {
+            const resp = await fetch(`${BACKEND}/api/admin/enrich-batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(batch)
+            });
+            return resp.ok;
+        }
+
+        async function startEnrichment() {
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            running = true;
+
+            // 1. Load mapping from backend
+            log('Loading movie→tmdbId mapping from backend...');
+            try {
+                const resp = await fetch(`${BACKEND}/api/admin/tmdb-mapping`);
+                mapping = await resp.json();
+            } catch (e) {
+                log('❌ Cannot reach backend at ' + BACKEND + '. Is it running?', 'err');
+                document.getElementById('startBtn').disabled = false;
+                return;
+            }
+
+            const entries = Object.entries(mapping);
+            const total = entries.length;
+            document.getElementById('total').textContent = total;
+            log(`Loaded ${total} movies to enrich`, 'ok');
+
+            // 2. Fetch in batches
+            let batch = [];
+            for (let i = 0; i < entries.length; i++) {
+                if (!running) { log('Stopped by user.', 'skip'); break; }
+
+                const [movieId, tmdbId] = entries[i];
+                try {
+                    const data = await fetchTmdb(tmdbId);
+                    if (!data) {
+                        errorCount++;
+                        if ((i + 1) % 50 === 0) log(`#${i+1} tmdb:${tmdbId} – no data`, 'err');
+                    } else {
+                        const countries = data.production_countries || [];
+                        batch.push({
+                            movie_id: parseInt(movieId),
+                            audience_score: data.vote_average,
+                            vote_count: data.vote_count,
+                            language: data.original_language,
+                            region: countries.length ? countries[0].iso_3166_1 : null,
+                            runtime: data.runtime,
+                            poster_url: data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : null,
+                            overview: data.overview
+                        });
+                        enrichedCount++;
+                    }
+                } catch (e) {
+                    errorCount++;
+                }
+
+                // Save batch
+                if (batch.length >= BATCH_SIZE) {
+                    const ok = await saveBatch(batch);
+                    if (ok) {
+                        log(`Saved batch of ${batch.length} movies (${enrichedCount}/${total})`, 'ok');
+                    } else {
+                        log(`Failed to save batch!`, 'err');
+                    }
+                    batch = [];
+                }
+
+                updateStats(total);
+                await new Promise(r => setTimeout(r, DELAY_MS));
+            }
+
+            // Save remaining
+            if (batch.length > 0) {
+                await saveBatch(batch);
+                log(`Saved final batch of ${batch.length} movies`, 'ok');
+            }
+
+            log(`\n✅ Done! Enriched: ${enrichedCount} | Errors: ${errorCount} | Skipped: ${skippedCount}`, 'ok');
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            running = false;
+        }
+
+        function stopEnrichment() {
+            running = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+    </script>
+</body>
+</html>

@@ -52,6 +52,11 @@ class Movie(Base):
     poster_url = Column(String)
     overview = Column(String)
     popularity = Column(Float)
+    audience_score = Column(Float, nullable=True)      # TMDb vote_average
+    vote_count = Column(Integer, nullable=True)         # TMDb vote_count
+    language = Column(String, nullable=True)            # TMDb original_language
+    region = Column(String, nullable=True)              # TMDb production_countries[0]
+    runtime = Column(Integer, nullable=True)            # TMDb runtime (minutes)
 
     genres = relationship("Genre", secondary=movie_genres_table, back_populates="movies")
     ratings = relationship("Rating", back_populates="movie")

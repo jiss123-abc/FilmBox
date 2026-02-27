@@ -2,6 +2,39 @@ from typing import List, Dict
 from google.genai import types
 from app.agents.gemini_client import get_gemini_client, GEMINI_MODEL
 
+def format_movie_details_response(movie, user_message: str) -> str | None:
+    """
+    Given a specific Movie object (with enriched TMDb data), generate a conversational
+    response talking about the movie.
+    """
+    prompt = (
+        f"You are a friendly movie concierge for 'FilmBox'.\n"
+        f"User said: '{user_message}'\n\n"
+        f"Movie details found:\n"
+        f"- Title: {movie.title}\n"
+        f"- Year: {movie.release_year}\n"
+        f"- Overview: {movie.overview}\n"
+        f"- Audience Score: {movie.audience_score}/10\n"
+        f"- Runtime: {movie.runtime} minutes\n\n"
+        f"INSTRUCTIONS:\n"
+        f"- Write a friendly, conversational paragraph (2-3 sentences) answering the user.\n"
+        f"- Highlight an interesting detail from the overview or score.\n"
+        f"- Avoid generic filler."
+    )
+
+    try:
+        client = get_gemini_client()
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.4, max_output_tokens=256)
+        )
+        return getattr(response, "text", None).strip()
+    except Exception as e:
+        print(f"⚠️ [Agent Fallback] specific movie narration failed: {e}")
+        return None
+
+
 def format_conversational_response(recommendations: List[Dict], user_message: str) -> str | None:
     """
     Optional narration helper.

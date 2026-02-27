@@ -2,6 +2,7 @@ import os
 import logging
 from fastapi import FastAPI
 from fastapi.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.core.config import ENV, LOG_LEVEL
@@ -42,6 +43,15 @@ app = FastAPI(
     title="FilmBox API",
     description="AI-powered movie recommendation system",
     version="1.0.0"
+)
+
+# Phase 24: CORS for dashboard + enrichment page
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Phase 23: Add Prometheus metrics middleware

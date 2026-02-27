@@ -6,3 +6,4 @@ class RecommendationIntent(BaseModel):
     genres: Optional[List[str]] = None
     mood: Optional[str] = None
     time_context: Optional[str] = None
+    movie_title: Optional[str] = None

@@ -11,6 +11,8 @@ from app.api.conversational_agent_api import router as llm_router
 from app.api.feedback_api import router as feedback_router
 from app.api.admin_api import router as admin_router
 from app.api.admin_analytics import router as admin_analytics_router
+from app.api.tmdb_enrichment_api import router as tmdb_enrichment_router  # TEMP: remove after enrichment
+from app.api.movie_search_api import router as movie_search_router
 
 api_router = APIRouter()
 
@@ -25,3 +27,5 @@ api_router.include_router(llm_router, tags=["LLM Agent"]) # Merge confusing dupl
 api_router.include_router(feedback_router, tags=["Feedback"])
 api_router.include_router(admin_router, tags=["Admin"])
 api_router.include_router(admin_analytics_router, tags=["Admin Analytics"])
+api_router.include_router(tmdb_enrichment_router, tags=["TMDb Enrichment"])  # TEMP: remove after enrichment
+api_router.include_router(movie_search_router, tags=["Movie Search"])

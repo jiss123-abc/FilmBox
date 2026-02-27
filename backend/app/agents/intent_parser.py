@@ -33,7 +33,8 @@ Schema:
   "intent": "recommend_movie" | "other",
   "genres": [string],
   "mood": string | null,
-  "time_context": string | null
+  "time_context": string | null,
+  "movie_title": string | null
 }}
 
 User message:
@@ -76,10 +77,10 @@ def extract_intent(message: str) -> RecommendationIntent:
         except:
              pass
         # Return a safe default to prevent system crashes
-        # Return a safe default to prevent system crashes
         return RecommendationIntent(
             intent="recommend_movie",
             genres=[],
             mood=None,
-            time_context=None
+            time_context=None,
+            movie_title=None
         )
