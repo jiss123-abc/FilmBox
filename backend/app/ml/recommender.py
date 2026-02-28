@@ -88,6 +88,7 @@ class Recommender:
                     "id": m.id, 
                     "title": m.title, 
                     "release_year": m.release_year,
+                    "poster_url": m.poster_url,
                     "overview": m.overview,
                     "runtime": m.runtime,
                     "language": m.language,
