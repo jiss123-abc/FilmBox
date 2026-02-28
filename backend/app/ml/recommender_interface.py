@@ -26,7 +26,16 @@ from app.ml.preference_reader import get_genre_preferences
 from app.ml.taste_bias import apply_taste_bias
 from app.ml.safety_controls import SafetyEnforcer
 
-def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
+def get_hybrid_recommendations(
+    user_id: int, 
+    top_n: int = 10, 
+    genres=None,
+    mood=None,
+    time_context=None,
+    max_runtime=None,
+    min_score=None,
+    language=None
+):
     """
     Orchestrates the recommendation flow:
     1. Select strategy (Adaptive via Phase 19)
@@ -59,6 +68,11 @@ def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
             user_id=user_id,
             top_n=top_n, # Fetch same amount, we re-rank/shuffle in place
             genres=genres,
+            mood=mood,
+            time_context=time_context,
+            max_runtime=max_runtime,
+            min_score=min_score,
+            language=language,
             preferred_strategy=final_strategy
         )
 
@@ -83,7 +97,11 @@ def get_hybrid_recommendations(user_id: int, top_n: int = 10, genres=None):
                 "movie_id": movie.get("id") or movie.get("movie_id"),
                 "title": movie.get("title"),
                 "explanation": movie.get("explanation", ""),
-                "strategy": final_strategy
+                "strategy": final_strategy,
+                "runtime": movie.get("runtime"),
+                "audience_score": movie.get("audience_score"),
+                "overview": movie.get("overview"),
+                "genres": movie.get("genres", [])
             })
 
         record_strategy_use(user_id, final_strategy)

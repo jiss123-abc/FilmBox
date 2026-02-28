@@ -34,7 +34,10 @@ Schema:
   "genres": [string],
   "mood": string | null,
   "time_context": string | null,
-  "movie_title": string | null
+  "movie_title": string | null,
+  "max_runtime": int | null,
+  "min_score": float | null,
+  "language": string | null
 }}
 
 User message:
@@ -82,5 +85,8 @@ def extract_intent(message: str) -> RecommendationIntent:
             genres=[],
             mood=None,
             time_context=None,
-            movie_title=None
+            movie_title=None,
+            max_runtime=None,
+            min_score=None,
+            language=None
         )

@@ -37,7 +37,15 @@ class ContentRecommender:
 
         self.similarity_matrix = cosine_similarity(self.movie_features)
 
-    def recommend_similar_movies(self, movie_id: int, top_n: int = 10, genre_filter: list[str] | None = None):
+    def recommend_similar_movies(
+        self, 
+        movie_id: int, 
+        top_n: int = 10, 
+        genre_filter: list[str] | None = None,
+        max_runtime: int | None = None,
+        min_score: float | None = None,
+        language: str | None = None
+    ):
         """
         Recommend movies similar to a given movie
         """
@@ -68,6 +76,13 @@ class ContentRecommender:
         
         if genre_filter:
             query = query.filter(Movie.genres.any(Genre.name.in_(genre_filter)))
+            
+        if max_runtime:
+            query = query.filter(Movie.runtime <= max_runtime)
+        if min_score:
+            query = query.filter(Movie.audience_score >= min_score)
+        if language:
+            query = query.filter(Movie.language == language)
 
         movies = query.all()
         
@@ -80,6 +95,10 @@ class ContentRecommender:
                 "id": m.id,
                 "title": m.title,
                 "release_year": m.release_year,
+                "overview": m.overview,
+                "runtime": m.runtime,
+                "audience_score": m.audience_score,
+                "score": float(id_to_score.get(m.id, 0)), # Feed similarity into the score system
                 "genres": [g.name for g in m.genres]
             }
             for m in movies[:top_n]

@@ -19,7 +19,15 @@ class Recommender:
         similarity = cosine_similarity(user_movie_matrix)
         return pd.DataFrame(similarity, index=user_movie_matrix.index, columns=user_movie_matrix.index)
 
-    def recommend(self, user_id: str, top_n: int = 10, genre_filter: list[str] | None = None):
+    def recommend(
+        self, 
+        user_id: str, 
+        top_n: int = 10, 
+        genre_filter: list[str] | None = None,
+        max_runtime: int | None = None,
+        min_score: float | None = None,
+        language: str | None = None
+    ):
         ratings_df = self.load_ratings()
         if ratings_df.empty:
             return []
@@ -49,6 +57,13 @@ class Recommender:
         if genre_filter:
             query = query.filter(Movie.genres.any(Genre.name.in_(genre_filter)))
 
+        if max_runtime:
+            query = query.filter(Movie.runtime <= max_runtime)
+        if min_score:
+            query = query.filter(Movie.audience_score >= min_score)
+        if language:
+            query = query.filter(Movie.language == language)
+
         movies = query.all()
         
         # Re-sort because SQL in_ doesn't guarantee order, and take top_n
@@ -61,6 +76,9 @@ class Recommender:
                     "id": m.id, 
                     "title": m.title, 
                     "release_year": m.release_year,
+                    "overview": m.overview,
+                    "runtime": m.runtime,
+                    "audience_score": m.audience_score,
                     "genres": [g.name for g in m.genres],
                     "score": float(weighted_ratings[mid]) # Keep the ML score for boosting
                 })

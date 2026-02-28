@@ -9,17 +9,27 @@ class PopularityRecommender:
         self.session = session
         self.min_votes = min_votes
 
-    def recommend(self, top_n: int = 10, genre_filter: list[str] | None = None):
+    def recommend(
+        self, 
+        top_n: int = 10, 
+        genre_filter: list[str] | None = None,
+        max_runtime: int | None = None,
+        min_score: float | None = None,
+        language: str | None = None
+    ):
         """
         Recommend globally popular movies based on
         average rating and number of ratings.
-        Optional genre_filter scopes results.
+        Optional filters scope results using enriched TMDb data.
         """
         query = (
             self.session.query(
                 Movie.id,
                 Movie.title,
                 Movie.release_year,
+                Movie.overview,
+                Movie.runtime,
+                Movie.audience_score,
                 func.avg(Rating.rating).label("avg_rating"),
                 func.count(Rating.user_id).label("rating_count")
             )
@@ -30,6 +40,13 @@ class PopularityRecommender:
             # Note: The above is a bit complex in SQLAlchemy for many-to-many.
             # A simpler way if genres is a relationship:
             query = query.filter(Movie.genres.any(Genre.name.in_(genre_filter)))
+            
+        if max_runtime:
+            query = query.filter(Movie.runtime <= max_runtime)
+        if min_score:
+            query = query.filter(Movie.audience_score >= min_score)
+        if language:
+            query = query.filter(Movie.language == language)
 
         movies = (
             query
@@ -48,6 +65,9 @@ class PopularityRecommender:
                 "id": m.id,
                 "title": m.title,
                 "release_year": m.release_year,
+                "overview": m.overview,
+                "runtime": m.runtime,
+                "audience_score": m.audience_score,
                 "avg_rating": round(float(m.avg_rating), 2),
                 "rating_count": m.rating_count,
                 "score": round(float(m.avg_rating), 2), # Use average rating as base score

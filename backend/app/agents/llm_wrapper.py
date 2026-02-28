@@ -41,17 +41,27 @@ def format_conversational_response(recommendations: List[Dict], user_message: st
     Returns a friendly string if LLM succeeds, or None if it fails.
     """
     # 1. Prepare structured text for LLM
-    rec_text = "\n".join(
-        [f"- {m['title']}: {m['explanation']}" for m in recommendations[:3]]
-    )
+    rec_text_lines = []
+    for idx, m in enumerate(recommendations[:3], 1):
+        score = m.get('audience_score') or 'N/A'
+        runtime = m.get('runtime') or 'N/A'
+        overview = m.get('overview', 'No overview available.')
+        
+        line = f"{idx}. {m['title']} (Score: {score}/10, Runtime: {runtime} mins)\n"
+        line += f"   Reason: {m.get('explanation', '')}\n"
+        line += f"   Overview: {overview}"
+        rec_text_lines.append(line)
+        
+    rec_text = "\n\n".join(rec_text_lines)
 
     prompt = (
-        f"You are a friendly movie concierge for 'FilmBox'.\n"
+        f"You are a friendly, highly intelligent movie concierge for 'FilmBox'.\n"
         f"User said: '{user_message}'\n\n"
-        f"Backend recommendations:\n{rec_text}\n\n"
+        f"Backend Top Recommendations:\n{rec_text}\n\n"
         f"INSTRUCTIONS:\n"
-        f"- Write a short, friendly paragraph (2-3 sentences).\n"
-        f"- Stay 100% grounded in the provided data."
+        f"- Write a friendly, conversational paragraph (3-4 sentences) responding to the user.\n"
+        f"- Seamlessly mention the true audience scores, runtimes, or interesting details from the overviews to make your recommendation compelling.\n"
+        f"- Stay 100% grounded in the provided data. Do not hallucinate."
     )
 
     # 2. Call Gemini via modular utility

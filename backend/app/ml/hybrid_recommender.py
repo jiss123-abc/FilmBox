@@ -58,7 +58,10 @@ class HybridRecommender:
         genres: list[str] | None = None,
         mood: str | None = None,
         time_context: str | None = None,
-        preferred_strategy: str | None = None
+        preferred_strategy: str | None = None,
+        max_runtime: int | None = None,
+        min_score: float | None = None,
+        language: str | None = None
     ):
         rating_count = self._user_rating_count(user_id)
         candidate_count = top_n * 5
@@ -81,18 +84,18 @@ class HybridRecommender:
 
         # 3. Execute Selected Strategy
         if strategy == "collaborative-filtering":
-            results = self.cf.recommend(str(user_id), candidate_count, genre_filter=genres)
+            results = self.cf.recommend(str(user_id), candidate_count, genre_filter=genres, max_runtime=max_runtime, min_score=min_score, language=language)
             reason = "User has sufficient interaction history; using collaborative taste."
             for movie in results:
                 movie["explanation"] = self._cf_explanation()
 
         elif strategy == "content-based":
-            results = self._content_fallback(user_id, candidate_count, genre_filter=genres)
+            results = self._content_fallback(user_id, candidate_count, genre_filter=genres, max_runtime=max_runtime, min_score=min_score, language=language)
             reason = "User has some history; matched against your liked movie genres."
 
         # FALLBACK (Safety)
         if not results:
-            results = self.popular.recommend(candidate_count, genre_filter=genres)
+            results = self.popular.recommend(candidate_count, genre_filter=genres, max_runtime=max_runtime, min_score=min_score, language=language)
             strategy = "popularity-based"
             reason = "Using globally trending movies for best experience."
             for movie in results:
@@ -124,7 +127,7 @@ class HybridRecommender:
             "recommendations": results[:top_n]
         }
 
-    def _content_fallback(self, user_id: int, top_n: int, genre_filter: list[str] | None = None):
+    def _content_fallback(self, user_id: int, top_n: int, genre_filter: list[str] | None = None, max_runtime: int | None = None, min_score: float | None = None, language: str | None = None):
         """
         Use the user's highest-rated movie(s) to seed content-based recommendations.
         """
@@ -142,7 +145,11 @@ class HybridRecommender:
 
         results = self.cb.recommend_similar_movies(
             movie_id=top_rated.movie_id,
-            top_n=top_n
+            top_n=top_n,
+            genre_filter=genre_filter,
+            max_runtime=max_runtime,
+            min_score=min_score,
+            language=language
         )
 
         for movie in results:
@@ -154,7 +161,7 @@ class HybridRecommender:
         return "Recommended because users with similar tastes liked this movie."
 
     def _content_explanation(self, seed_movie_title: str):
-        return f"Recommended because it shares similar genres with '{seed_movie_title}'."
+        return f"Recommended because it shares similar genres with movies you have highly rated."
 
     def _popularity_explanation(self, rating_count: int, avg_rating: float):
         return (

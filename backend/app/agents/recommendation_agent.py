@@ -25,7 +25,11 @@ def run_recommendation_agent(user_id: int, message: str, genres: list[str] | Non
         formatted_movies.append({
             "movie_id": movie["movie_id"],
             "title": movie["title"],
-            "explanation": movie["explanation"]
+            "explanation": movie["explanation"],
+            "runtime": movie.get("runtime"),
+            "audience_score": movie.get("audience_score"),
+            "overview": movie.get("overview"),
+            "genres": movie.get("genres", [])
         })
 
     top_movie = formatted_movies[0]
