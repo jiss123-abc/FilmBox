@@ -1,8 +1,7 @@
 import json
 import re
-from app.agents.gemini_client import get_gemini_client, GEMINI_MODEL
+from app.agents.groq_client import get_groq_client, GROQ_MODEL
 from app.agents.intent_schema import RecommendationIntent
-from google.genai import types
 
 def safe_parse_json(text: str) -> dict | None:
     """
@@ -37,7 +36,7 @@ Schema:
   "movie_title": string | null,
   "max_runtime": int | null,
   "min_score": float | null,
-  "language": string | null
+  "language": string | null  // MUST be a 2-letter ISO-639-1 code (e.g. "en", "fr", "es", "ja", "ko"). Do not use full words.
 }}
 
 User message:
@@ -51,19 +50,23 @@ def extract_intent(message: str) -> RecommendationIntent:
     Completely fail-safe: returns default intent on any error.
     """
     try:
-        client = get_gemini_client()
+        client = get_groq_client()
 
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=INTENT_PROMPT.format(message=message),
-            config=types.GenerateContentConfig(
-                temperature=0.0,
-                max_output_tokens=512
-            )
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": INTENT_PROMPT.format(message=message),
+                }
+            ],
+            model=GROQ_MODEL,
+            temperature=0.0,
+            max_completion_tokens=512,
+            response_format={"type": "json_object"}
         )
 
         # Robust null-guard for the text attribute
-        raw_text = getattr(response, "text", None)
+        raw_text = response.choices[0].message.content
         
         data = safe_parse_json(raw_text)
         

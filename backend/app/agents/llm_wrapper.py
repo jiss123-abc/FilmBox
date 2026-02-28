@@ -1,6 +1,5 @@
 from typing import List, Dict
-from google.genai import types
-from app.agents.gemini_client import get_gemini_client, GEMINI_MODEL
+from app.agents.groq_client import get_groq_client, GROQ_MODEL
 
 def format_movie_details_response(movie, user_message: str) -> str | None:
     """
@@ -23,13 +22,19 @@ def format_movie_details_response(movie, user_message: str) -> str | None:
     )
 
     try:
-        client = get_gemini_client()
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(temperature=0.4, max_output_tokens=256)
+        client = get_groq_client()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            model=GROQ_MODEL,
+            temperature=0.4,
+            max_completion_tokens=256,
         )
-        return getattr(response, "text", None).strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"⚠️ [Agent Fallback] specific movie narration failed: {e}")
         return None
@@ -66,18 +71,21 @@ def format_conversational_response(recommendations: List[Dict], user_message: st
 
     # 2. Call Gemini via modular utility
     try:
-        client = get_gemini_client()
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.4,
-                max_output_tokens=256
-            )
+        client = get_groq_client()
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            model=GROQ_MODEL,
+            temperature=0.4,
+            max_completion_tokens=256,
         )
         
         # SAFE ACCESSOR: Ensure we don't crash on None or empty strings
-        raw_text = getattr(response, "text", None)
+        raw_text = response.choices[0].message.content
         
         if not raw_text or not raw_text.strip():
             raise ValueError("Narration empty")
