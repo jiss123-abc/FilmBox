@@ -1,23 +1,10 @@
-import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
 from sqlalchemy.orm import Session
-from app.models.base_models import Rating, Movie, Genre
+from sqlalchemy import desc
+from app.models.base_models import Rating, Movie, Genre, UserSimilarity
 
 class Recommender:
     def __init__(self, session: Session):
         self.session = session
-
-    def load_ratings(self):
-        ratings_data = self.session.query(Rating).all()
-        data = [{"user_id": r.user_id, "movie_id": r.movie_id, "rating": r.rating} for r in ratings_data]
-        return pd.DataFrame(data)
-
-    def create_user_movie_matrix(self, ratings_df):
-        return ratings_df.pivot(index='user_id', columns='movie_id', values='rating').fillna(0)
-
-    def compute_user_similarity(self, user_movie_matrix):
-        similarity = cosine_similarity(user_movie_matrix)
-        return pd.DataFrame(similarity, index=user_movie_matrix.index, columns=user_movie_matrix.index)
 
     def recommend(
         self, 
@@ -28,28 +15,53 @@ class Recommender:
         min_score: float | None = None,
         language: str | None = None
     ):
-        ratings_df = self.load_ratings()
-        if ratings_df.empty:
+        """
+        Recommend movies using PRECOMPUTED User-CF SQLite scores.
+        Zero memory overhead.
+        """
+        # 1. Get Top Similar Users
+        similarities = (
+            self.session.query(UserSimilarity)
+            .filter(UserSimilarity.user_id == user_id)
+            .order_by(desc(UserSimilarity.similarity_score))
+            .limit(15) # Top 15 closest users
+            .all()
+        )
+        
+        if not similarities:
             return []
             
-        user_movie_matrix = self.create_user_movie_matrix(ratings_df)
-        if user_id not in user_movie_matrix.index:
+        sim_scores_dict = {sim.similar_user_id: sim.similarity_score for sim in similarities}
+        similar_user_ids = list(sim_scores_dict.keys())
+        
+        # 2. Get the movies that these similar users rated highly (>= 4)
+        # and that the current user has NOT rated.
+        user_rated_movie_ids = {
+            r[0] for r in self.session.query(Rating.movie_id).filter(Rating.user_id == user_id).all()
+        }
+        
+        candidate_ratings = (
+            self.session.query(Rating)
+            .filter(Rating.user_id.in_(similar_user_ids))
+            .filter(~Rating.movie_id.in_(user_rated_movie_ids)) # Exclude already watched
+            .filter(Rating.rating >= 4) # Only good recommendations
+            .all()
+        )
+        
+        if not candidate_ratings:
             return []
-
-        similarity_df = self.compute_user_similarity(user_movie_matrix)
-        sim_scores = similarity_df[user_id]
-        
-        # Weighted sum of ratings from similar users
-        weighted_ratings = user_movie_matrix.T.dot(sim_scores) / sim_scores.sum()
-        
-        # Remove movies already rated by the user
-        rated_movies = user_movie_matrix.loc[user_id]
-        weighted_ratings = weighted_ratings[rated_movies == 0]
-
-        # Get candidates (get more than needed to allow for genre filtering)
-        # If no filter, just take top_n. If filter, take a larger buffer.
+            
+        # 3. Calculate weighted scores: sum(rating * user_similarity)
+        movie_scores = {}
+        for r in candidate_ratings:
+            weight = sim_scores_dict.get(r.user_id, 0)
+            if r.movie_id not in movie_scores:
+                movie_scores[r.movie_id] = 0
+            movie_scores[r.movie_id] += r.rating * weight
+            
+        # Sort candidates
         candidate_limit = top_n * 5 if genre_filter else top_n
-        top_movies_ids = weighted_ratings.sort_values(ascending=False).head(candidate_limit).index.tolist()
+        top_movies_ids = sorted(movie_scores, key=movie_scores.get, reverse=True)[:candidate_limit]
         
         # Get movie details
         query = self.session.query(Movie).filter(Movie.id.in_(top_movies_ids))
@@ -78,9 +90,10 @@ class Recommender:
                     "release_year": m.release_year,
                     "overview": m.overview,
                     "runtime": m.runtime,
+                    "language": m.language,
                     "audience_score": m.audience_score,
                     "genres": [g.name for g in m.genres],
-                    "score": float(weighted_ratings[mid]) # Keep the ML score for boosting
+                    "score": float(movie_scores.get(mid, 0)) # Keep the ML score for boosting
                 })
             if len(final_list) >= top_n:
                 break

@@ -50,7 +50,7 @@ def run_conversational_agent_llm(user_id: int, message: str) -> Dict[str, Any]:
             if movie:
                 # Narrator gives details
                 response_text = format_movie_details_response(movie, message)
-                base_text = f"Here's what I found about **{movie.title}** ({movie.release_year}):\n\n{movie.overview}\n\nAudience Score: {movie.audience_score}/10"
+                base_text = f"Here's what I found about **{movie.title}** ({movie.release_year}):\n\n{movie.overview}\n\nAudience Score: {movie.audience_score}/10\nLanguage: {movie.language}"
                 
                 return {
                     "response": response_text or base_text,

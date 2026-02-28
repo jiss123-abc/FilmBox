@@ -99,6 +99,7 @@ def get_hybrid_recommendations(
                 "explanation": movie.get("explanation", ""),
                 "strategy": final_strategy,
                 "runtime": movie.get("runtime"),
+                "language": movie.get("language"),
                 "audience_score": movie.get("audience_score"),
                 "overview": movie.get("overview"),
                 "genres": movie.get("genres", [])

@@ -27,6 +27,7 @@ def run_recommendation_agent(user_id: int, message: str, genres: list[str] | Non
             "title": movie["title"],
             "explanation": movie["explanation"],
             "runtime": movie.get("runtime"),
+            "language": movie.get("language"),
             "audience_score": movie.get("audience_score"),
             "overview": movie.get("overview"),
             "genres": movie.get("genres", [])

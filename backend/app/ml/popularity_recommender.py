@@ -29,6 +29,7 @@ class PopularityRecommender:
                 Movie.release_year,
                 Movie.overview,
                 Movie.runtime,
+                Movie.language,
                 Movie.audience_score,
                 func.avg(Rating.rating).label("avg_rating"),
                 func.count(Rating.user_id).label("rating_count")
@@ -67,6 +68,7 @@ class PopularityRecommender:
                 "release_year": m.release_year,
                 "overview": m.overview,
                 "runtime": m.runtime,
+                "language": m.language,
                 "audience_score": m.audience_score,
                 "avg_rating": round(float(m.avg_rating), 2),
                 "rating_count": m.rating_count,

@@ -24,6 +24,33 @@ user_genres_table = Table(
 )
 
 # ---------------------------
+# Machine Learning Tables (Precomputed)
+# ---------------------------
+
+class MovieSimilarity(Base):
+    __tablename__ = "movie_similarities"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    movie_id = Column(Integer, ForeignKey("movies.id"), nullable=False, index=True)
+    similar_movie_id = Column(Integer, ForeignKey("movies.id"), nullable=False)
+    similarity_score = Column(Float, nullable=False)
+
+    movie = relationship("Movie", foreign_keys=[movie_id])
+    similar_movie = relationship("Movie", foreign_keys=[similar_movie_id])
+
+
+class UserSimilarity(Base):
+    __tablename__ = "user_similarities"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    similar_user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    similarity_score = Column(Float, nullable=False)
+
+    user = relationship("User", foreign_keys=[user_id])
+    similar_user = relationship("User", foreign_keys=[similar_user_id])
+
+# ---------------------------
 # Core Tables
 # ---------------------------
 
