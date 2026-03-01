@@ -34,7 +34,9 @@ def get_hybrid_recommendations(
     time_context=None,
     max_runtime=None,
     min_score=None,
-    language=None
+    max_score=None,
+    language=None,
+    min_year=None
 ):
     """
     Orchestrates the recommendation flow:
@@ -56,13 +58,13 @@ def get_hybrid_recommendations(
         
         final_strategy = adaptive_result["strategy"]
         exploration_rate = adaptive_result.get("exploration", 0.0)
-
+ 
         # Phase 20: Decay Preferences ("Memory Fading")
         decay_preferences(session, user_id)
         
         # Phase 20: Fetch Active Preferences
         genre_weights = get_genre_preferences(session, user_id)
-
+ 
         hybrid = HybridRecommender(session)
         result = hybrid.recommend(
             user_id=user_id,
@@ -72,7 +74,9 @@ def get_hybrid_recommendations(
             time_context=time_context,
             max_runtime=max_runtime,
             min_score=min_score,
+            max_score=max_score,
             language=language,
+            min_year=min_year,
             preferred_strategy=final_strategy
         )
 

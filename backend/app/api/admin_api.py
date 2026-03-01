@@ -8,8 +8,9 @@ from app.models.strategy_stats import StrategyStats
 from app.models.feedback_models import UserFeedback
 from app.models.recommendation_log import RecommendationLog
 from app.analytics.analytics_service import AnalyticsService
+from app.api.auth import verify_admin
 
-router = APIRouter(prefix="/api/admin", tags=["Admin Analytics"])
+router = APIRouter(prefix="/api/admin", tags=["Admin Analytics"], dependencies=[Depends(verify_admin)])
 
 @router.get("/metrics")
 def get_admin_metrics(db: Session = Depends(get_db)):
@@ -156,11 +157,3 @@ def get_user_engagement(db: Session = Depends(get_db)):
     service = AnalyticsService(db)
     return service.get_user_engagement()
 
-@router.get("/analytics/evolution")
-def get_strategy_evolution(days: int = 30, db: Session = Depends(get_db)):
-    """
-    Returns daily performance trends for all strategies.
-    This maps the "learning curve" of the recommender.
-    """
-    service = AnalyticsService(db)
-    return service.get_strategy_evolution(days=days)

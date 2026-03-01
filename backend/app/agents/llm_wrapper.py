@@ -46,9 +46,9 @@ def format_conversational_response(recommendations: List[Dict], user_message: st
     Optional narration helper.
     Returns a friendly string if LLM succeeds, or None if it fails.
     """
-    # 1. Prepare structured text for LLM
+    # 1. Prepare structured text for LLM (up to 15 to fit context/token limits well)
     rec_text_lines = []
-    for idx, m in enumerate(recommendations[:3], 1):
+    for idx, m in enumerate(recommendations[:15], 1):
         score = m.get('audience_score') or 'N/A'
         runtime = m.get('runtime') or 'N/A'
         language = m.get('language') or 'N/A'

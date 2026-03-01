@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.agents.recommendation_agent import run_recommendation_agent
 
@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/agent", tags=["AI Agent"])
 
 class AgentRequest(BaseModel):
     user_id: int
-    message: str
+    message: str = Field(..., max_length=500)
 
 
 @router.post("/recommend")

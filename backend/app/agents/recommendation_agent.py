@@ -2,13 +2,13 @@ from typing import Dict, Any, List
 from app.ml.recommender_interface import get_hybrid_recommendations
 
 
-def run_recommendation_agent(user_id: int, message: str, genres: list[str] | None = None) -> Dict[str, Any]:
+def run_recommendation_agent(user_id: int, message: str, genres: list[str] | None = None, top_n: int = 10) -> Dict[str, Any]:
     """
     Deterministic recommendation agent.
     Orchestrates recommendation logic and formats explanations.
     """
 
-    recommendations = get_hybrid_recommendations(user_id, genres=genres)
+    recommendations = get_hybrid_recommendations(user_id, genres=genres, top_n=top_n)
 
     if not recommendations:
         return {

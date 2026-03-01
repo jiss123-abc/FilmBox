@@ -15,12 +15,15 @@ class ContentRecommender:
         genre_filter: list[str] | None = None,
         max_runtime: int | None = None,
         min_score: float | None = None,
-        language: str | None = None
+        max_score: float | None = None,
+        language: str | None = None,
+        min_year: int | None = None
     ):
         """
         Recommend movies similar to a given movie using PRECOMPUTED SQLite scores.
         Zero memory overhead.
         """
+        # ... [logic to fetch precomputed similarities] ...
         # Fetch precomputed similarities
         candidate_count = top_n * 10 if genre_filter else top_n + 5
         
@@ -37,7 +40,7 @@ class ContentRecommender:
             
         sim_scores_dict = {sim.similar_movie_id: sim.similarity_score for sim in similarities}
         similar_movie_ids = list(sim_scores_dict.keys())
-
+ 
         # Fetch actual movie details
         query = (
             self.session.query(Movie)
@@ -51,8 +54,12 @@ class ContentRecommender:
             query = query.filter(Movie.runtime <= max_runtime)
         if min_score:
             query = query.filter(Movie.audience_score >= min_score)
+        if max_score:
+            query = query.filter(Movie.audience_score <= max_score)
         if language:
             query = query.filter(Movie.language == language)
+        if min_year:
+            query = query.filter(Movie.release_year >= min_year)
 
         movies = query.all()
         

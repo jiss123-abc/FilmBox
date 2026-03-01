@@ -13,12 +13,15 @@ class Recommender:
         genre_filter: list[str] | None = None,
         max_runtime: int | None = None,
         min_score: float | None = None,
-        language: str | None = None
+        max_score: float | None = None,
+        language: str | None = None,
+        min_year: int | None = None
     ):
         """
         Recommend movies using PRECOMPUTED User-CF SQLite scores.
         Zero memory overhead.
         """
+        # ... [logic to get similar users and candidate ratings] ...
         # 1. Get Top Similar Users
         similarities = (
             self.session.query(UserSimilarity)
@@ -73,8 +76,12 @@ class Recommender:
             query = query.filter(Movie.runtime <= max_runtime)
         if min_score:
             query = query.filter(Movie.audience_score >= min_score)
+        if max_score:
+            query = query.filter(Movie.audience_score <= max_score)
         if language:
             query = query.filter(Movie.language == language)
+        if min_year:
+            query = query.filter(Movie.release_year >= min_year)
 
         movies = query.all()
         

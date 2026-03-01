@@ -10,3 +10,4 @@ class RecommendationIntent(BaseModel):
     max_runtime: Optional[int] = None      # e.g., 120 (for "under 2 hours")
     min_score: Optional[float] = None      # e.g., 8.0 (for "highly rated")
     language: Optional[str] = None         # e.g., "en", "fr"
+    quantity: Optional[int] = None         # e.g., 13 (for "13 highly rated movies")

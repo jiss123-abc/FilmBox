@@ -62,6 +62,64 @@ def search_movies(query: str, page: int = 1) -> dict:
     }
 
 
+# Language code → TMDb genre name map (used for keyword-based discover)
+TMDB_GENRE_IDS = {
+    "action": 28, "adventure": 12, "animation": 16, "comedy": 35,
+    "crime": 80, "documentary": 99, "drama": 18, "family": 10751,
+    "fantasy": 14, "history": 36, "horror": 27, "music": 10402,
+    "mystery": 9648, "romance": 10749, "sci-fi": 878, "thriller": 53,
+    "war": 10752, "western": 37,
+}
+
+
+def discover_by_language(language: str, genres: list[str] | None = None, top_n: int = 10) -> list[dict]:
+    """
+    Use TMDb /discover/movie to fetch top-rated movies in a given language.
+    Optionally filter by genre names. Returns a normalized list of movie dicts.
+    """
+    genre_ids = None
+    if genres:
+        ids = [TMDB_GENRE_IDS[g.lower()] for g in genres if g.lower() in TMDB_GENRE_IDS]
+        genre_ids = ",".join(str(i) for i in ids) if ids else None
+
+    params = {
+        "api_key": _get_api_key(),
+        "with_original_language": language,
+        "sort_by": "vote_average.desc",
+        "vote_count.gte": 100,          # Ensure quality results
+        "page": 1,
+    }
+    if genre_ids:
+        params["with_genres"] = genre_ids
+
+    try:
+        resp = requests.get(f"{TMDB_BASE}/discover/movie", params=params, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+
+        results = []
+        for item in data.get("results", [])[:top_n]:
+            poster_path = item.get("poster_path")
+            release_date = item.get("release_date", "")
+            results.append({
+                "movie_id": item["id"],
+                "title": item.get("title", ""),
+                "release_year": int(release_date[:4]) if release_date and len(release_date) >= 4 else None,
+                "overview": item.get("overview", ""),
+                "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
+                "audience_score": item.get("vote_average"),
+                "language": item.get("original_language"),
+                "runtime": None,
+                "genres": [],
+                "explanation": f"Highly rated {language.upper()} movie from TMDb.",
+                "strategy": "tmdb-live-discovery",
+            })
+        return results
+    except Exception as e:
+        print(f"⚠️ [TMDb Discover] Failed for language={language}: {e}")
+        return []
+
+
 def get_movie_details(tmdb_id: int) -> dict:
     """
     Fetch full movie details from TMDb by tmdb_id.

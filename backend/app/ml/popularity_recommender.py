@@ -15,7 +15,9 @@ class PopularityRecommender:
         genre_filter: list[str] | None = None,
         max_runtime: int | None = None,
         min_score: float | None = None,
-        language: str | None = None
+        max_score: float | None = None,
+        language: str | None = None,
+        min_year: int | None = None
     ):
         """
         Recommend globally popular movies based on
@@ -37,7 +39,7 @@ class PopularityRecommender:
             )
             .join(Rating, Rating.movie_id == Movie.id)
         )
-
+ 
         if genre_filter:
             # Note: The above is a bit complex in SQLAlchemy for many-to-many.
             # A simpler way if genres is a relationship:
@@ -47,13 +49,22 @@ class PopularityRecommender:
             query = query.filter(Movie.runtime <= max_runtime)
         if min_score:
             query = query.filter(Movie.audience_score >= min_score)
+        if max_score:
+            query = query.filter(Movie.audience_score <= max_score)
         if language:
             query = query.filter(Movie.language == language)
+        if min_year:
+            query = query.filter(Movie.release_year >= min_year)
+ 
+        # Reduce minimum votes if strict filters are applied to prevent over-filtering niche queries
+        current_min_votes = self.min_votes
+        if genre_filter or max_runtime or min_score or max_score or language:
+            current_min_votes = 1  # Just ensure it has at least 1 rating so it has an average score
 
         movies = (
             query
             .group_by(Movie.id)
-            .having(func.count(Rating.user_id) >= self.min_votes)
+            .having(func.count(Rating.user_id) >= current_min_votes)
             .order_by(
                 func.avg(Rating.rating).desc(),
                 func.count(Rating.user_id).desc()

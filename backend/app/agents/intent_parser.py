@@ -33,10 +33,11 @@ Schema:
   "genres": [string],
   "mood": string | null,
   "time_context": string | null,
-  "movie_title": string | null,
+  "movie_title": string | null, // ONLY extract if the user mentions a specific, exact movie title. If they ask for a LIST or general recommendations (e.g., "13 highest rated movies"), this MUST be null.
   "max_runtime": int | null,
   "min_score": float | null,
-  "language": string | null  // MUST be a 2-letter ISO-639-1 code (e.g. "en", "fr", "es", "ja", "ko"). Do not use full words.
+  "language": string | null, // MUST be a 2-letter ISO-639-1 code (e.g. "en", "fr").
+  "quantity": int | null     // If the user asks for a specific number of movies (e.g. "13 highest rated").
 }}
 
 User message:
@@ -91,5 +92,6 @@ def extract_intent(message: str) -> RecommendationIntent:
             movie_title=None,
             max_runtime=None,
             min_score=None,
-            language=None
+            language=None,
+            quantity=None
         )

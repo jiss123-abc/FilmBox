@@ -1,7 +1,7 @@
 import os
 from groq import Groq
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "llama-3.1-8b-instant"
 
 def get_groq_client():
     """

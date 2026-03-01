@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.analytics.strategy_metrics import get_strategy_metrics
 from app.analytics.analytics_service import AnalyticsService
+from app.api.auth import verify_admin
 
-router = APIRouter(prefix="/api/admin/analytics", tags=["Admin Analytics"])
+router = APIRouter(prefix="/api/admin/analytics", tags=["Admin Analytics"], dependencies=[Depends(verify_admin)])
 
 
 @router.get("/strategies")
